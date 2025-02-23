@@ -14,34 +14,38 @@
 
 "use client";
 
-import { useEffect, useState } from "react";
+import { useContext, useEffect, useState } from "react";
 import axios from "axios";
 import { useDrag, useDrop, DndProvider } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
 import { toast } from "react-hot-toast";
-import { Trash, Edit,  Clock } from "lucide-react";
+import { Trash, Edit, Clock } from "lucide-react";
 import io from "socket.io-client";
 import { format } from "date-fns";
+import { AuthContext } from "../AuthProvider/AuthProvider";
 
-const socket = io("http://localhost:5000");
+const socket = io("https://task-management-server-production-2c52.up.railway.app");
 
 const ItemType = "TASK";
 
 const TaskBoard = () => {
-  const [tasks, setTasks] = useState({ 
-    todo: [], 
-    inProgress: [], 
-    done: [] 
+  const { user } = useContext(AuthContext)
+  const [tasks, setTasks] = useState({
+    todo: [],
+    inProgress: [],
+    done: [],
+
   });
-  
-  const [taskData, setTaskData] = useState({ 
-    title: "", 
-    description: "", 
-    category: "todo", 
-    createdAt: new Date().toISOString(), 
-    updatedAt: new Date().toISOString() 
+
+  const [taskData, setTaskData] = useState({
+    title: "",
+    description: "",
+    category: "todo",
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    email: user?.email,
   });
-  
+
   const [editingTask, setEditingTask] = useState(null);
 
   useEffect(() => {
@@ -83,7 +87,14 @@ const TaskBoard = () => {
 
   const fetchTasks = async () => {
     try {
-      const { data } = await axios.get("http://localhost:5000/tasks");
+      if (!user?.email) {
+        toast.error("No task added you");
+        return;
+      }
+
+      // ইউজারের ইমেইল অনুযায়ী টাস্ক ফিল্টার করে আনার জন্য query পাঠাচ্ছি
+      const { data } = await axios.get(`https://task-management-server-production-2c52.up.railway.app/tasks?email=${user.email}`);
+
       const categorizedTasks = data.reduce(
         (acc, task) => {
           acc[task.category].push(task);
@@ -91,26 +102,38 @@ const TaskBoard = () => {
         },
         { todo: [], inProgress: [], done: [] }
       );
+
       setTasks(categorizedTasks);
     } catch (error) {
       toast.error("Failed to load tasks!");
     }
   };
 
+
+  useEffect(() => {
+    if (user?.email) {
+      fetchTasks();
+    }
+  }, [user?.email]);
+
+
   const handleTaskSave = async () => {
     if (!taskData.title.trim()) return toast.error("Task title is required!");
     try {
       if (editingTask) {
-        const { data: updatedTask } = await axios.put(`http://localhost:5000/tasks/${editingTask._id}`, taskData);
+        const { data: updatedTask } = await axios.put(`https://task-management-server-production-2c52.up.railway.app/tasks/${editingTask._id}`, taskData);
         socket.emit("taskUpdated", updatedTask);
         setEditingTask(null);
         toast.success("Task updated successfully!");
       } else {
-        const { data: newTask } = await axios.post("http://localhost:5000/tasks", taskData);
+        const { data: newTask } = await axios.post("https://task-management-server-production-2c52.up.railway.app/tasks", taskData);
         socket.emit("taskAdded", newTask);
         toast.success("Task added successfully!");
       }
-      setTaskData({ title: "", description: "", category: "todo" });
+      setTaskData({
+        title: "", description: "", category: "todo", createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
+        email: user?.email
+      });
     } catch (error) {
       toast.error("Failed to save task!");
     }
@@ -118,7 +141,7 @@ const TaskBoard = () => {
 
   const handleDeleteTask = async (taskId) => {
     try {
-      await axios.delete(`http://localhost:5000/tasks/${taskId}`);
+      await axios.delete(`https://task-management-server-production-2c52.up.railway.app/tasks/${taskId}`);
       socket.emit("taskDeleted", taskId);
       toast.success("Task deleted successfully!");
     } catch (error) {
@@ -128,7 +151,7 @@ const TaskBoard = () => {
 
   // const moveTask = async (task, newCategory) => {
   //   try {
-  //     const { data: updatedTask } = await axios.put(`http://localhost:5000/tasks/${task._id}`, { category: newCategory });
+  //     const { data: updatedTask } = await axios.put(`https://task-management-server-production-2c52.up.railway.app/tasks/${task._id}`, { category: newCategory });
   //     setTasks((prev) => ({
   //       ...prev,
   //       [task.category]: prev[task.category].filter((t) => t._id !== task._id),
@@ -146,73 +169,80 @@ const TaskBoard = () => {
       setTasks((prev) => {
         const updatedPrevCategory = prev[task.category].filter((t) => t._id !== task._id);
         const updatedNewCategory = [{ ...task, category: newCategory }, ...prev[newCategory]];
-        
+
         return {
           ...prev,
           [task.category]: updatedPrevCategory,
           [newCategory]: updatedNewCategory,
         };
       });
-  
+
       // সার্ভারে আপডেট পাঠানো
-      const { data: updatedTask } = await axios.put(`http://localhost:5000/tasks/${task._id}`, { category: newCategory });
-  
+      const { data: updatedTask } = await axios.put(`https://task-management-server-production-2c52.up.railway.app/tasks/${task._id}`, { category: newCategory });
+
       // সার্ভার থেকে আপডেট এলে নিশ্চিত করা
       socket.emit("taskMoved", updatedTask);
-  
+
     } catch (error) {
       toast.error("Failed to move task!");
       fetchTasks(); // ব্যাকআপ হিসেবে পুরো ডাটা আবার লোড করো
     }
   };
-  
+
   return (
     <DndProvider backend={HTML5Backend}>
-    <div className="min-h-screen bg-gray-100 p-6 flex flex-col items-center">
-  <h1 className="text-4xl font-extrabold text-gray-800 mb-6 drop-shadow-md">📌 Task <span className="text-yellow-400">Manager</span></h1>
+      <div className="min-h-screen bg-gray-100 p-6 flex flex-col items-center">
+        <h1 className="text-4xl font-extrabold text-gray-800 mb-6 drop-shadow-md">📌 Task <span className="text-yellow-400">Manager</span></h1>
 
-  <div className="mb-6 lg:flex item-center justify-center gap-4 space-y-3 bg-white shadow-lg p-6 rounded-2xl w-full max-w-7xl">
-    {/* Task Title */}
-    <input
-      type="text"
-      placeholder="Enter Task Title (max 50 chars)"
-      className="p-3 border rounded-full w-full md:w-1/3 focus:ring-2 focus:ring-blue-400 outline-none"
-      value={taskData.title}
-      onChange={(e) => {
-        if (e.target.value.length <= 50) {
-          setTaskData({ ...taskData, title: e.target.value });
-        }
-      }}
-    />
-    
-    {/* Task Description */}
-    <input
-      type="text"
-      placeholder="Enter Task Description (max 200 chars)"
-      className="p-3 border rounded-full w-full md:w-2/3 focus:ring-2 focus:ring-blue-400 outline-none"
-      value={taskData.description}
-      onChange={(e) => {
-        if (e.target.value.length <= 200) {
-          setTaskData({ ...taskData, description: e.target.value });
-        }
-      }}
-    />
-    
-    {/* Task Category */}
-    <select
-      className="p-3 border rounded-full focus:ring-2 focus:ring-blue-400 outline-none cursor-pointer"
-      value={taskData.category}
-      onChange={(e) => setTaskData({ ...taskData, category: e.target.value })}
-    >
-      <option value="todo">📝 To Do</option>
-      <option value="inProgress">⏳ In Progress</option>
-      <option value="done">✅ Done</option>
-    </select>
+        <div className="mb-6 lg:flex item-center justify-center gap-4 space-y-3 bg-white shadow-lg p-6 rounded-2xl w-full max-w-7xl">
+          {/* Task Title */}
+          <input
+            type="text"
+            placeholder="Enter Task Title (max 50 chars)"
+            className="p-3 border rounded-full w-full md:w-1/3 focus:ring-2 focus:ring-blue-400 outline-none"
+            value={taskData.title}
+            onChange={(e) => {
+              if (e.target.value.length <= 50) {
+                setTaskData({ ...taskData, title: e.target.value });
+              }
+            }}
+          />
 
-    {/* Add / Update Button */}
-    <button
-  onClick={handleTaskSave}
-  className={` p-3 ml-2  whitespace-nowrap rounded-full shadow-md hover:scale-105 transition-transform ${
+          {/* Task Description */}
+          <input
+            type="text"
+            placeholder="Enter Task Description (max 200 chars)"
+            className="p-3 border rounded-full w-full md:w-2/3 focus:ring-2 focus:ring-blue-400 outline-none"
+            value={taskData.description}
+            onChange={(e) => {
+              if (e.target.value.length <= 200) {
+                setTaskData({ ...taskData, description: e.target.value });
+              }
+            }}
+          />
+
+          {/* Task Category */}
+          <select
+            className="p-3 border rounded-full focus:ring-2 focus:ring-blue-400 outline-none cursor-pointer"
+            value={taskData.category}
+            onChange={(e) => setTaskData({ ...taskData, category: e.target.value })}
+          >
+            <option value="todo">📝 To Do</option>
+            <option value="inProgress">⏳ In Progress</option>
+            <option value="done">✅ Done</option>
+          </select>
+
+          {/* Add / Update Button */}
+          <button
+  onClick={() => {
+    if (!user) {
+      toast.error("Please login to continue.");
+      navigate("/login");
+      return;
+    }
+    handleTaskSave();
+  }}
+  className={`p-3 ml-2 whitespace-nowrap rounded-full shadow-md hover:scale-105 transition-transform ${
     editingTask
       ? "bg-yellow-300 text-black"
       : "bg-gradient-to-r from-blue-500 to-indigo-600 text-white"
@@ -221,23 +251,24 @@ const TaskBoard = () => {
   {editingTask ? "Update Task" : "Add Task"}
 </button>
 
-  </div>
 
-  {/* Task Columns */}
-  <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full max-w-6xl">
-    {Object.entries(tasks).map(([category, categoryTasks]) => (
-      <TaskColumn
-        key={category}
-        category={category}
-        tasks={categoryTasks}
-        moveTask={moveTask}
-        onDelete={handleDeleteTask}
-        setEditingTask={setEditingTask}
-        setTaskData={setTaskData}
-      />
-    ))}
-  </div>
-</div>
+        </div>
+
+        {/* Task Columns */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full max-w-6xl">
+          {Object.entries(tasks).map(([category, categoryTasks]) => (
+            <TaskColumn
+              key={category}
+              category={category}
+              tasks={categoryTasks}
+              moveTask={moveTask}
+              onDelete={handleDeleteTask}
+              setEditingTask={setEditingTask}
+              setTaskData={setTaskData}
+            />
+          ))}
+        </div>
+      </div>
 
     </DndProvider>
   );
@@ -252,20 +283,19 @@ const TaskColumn = ({ category, tasks, moveTask, onDelete, setEditingTask, setTa
   return (
     <div ref={drop} className="bg-gray-50 p-4 rounded-lg shadow min-h-[200px]">
       <h2
-  className={`font-semibold text-2xl mb-4 ${
-    category === "todo"
-      ? "text-blue-600"
-      : category === "inProgress"
-      ? "text-yellow-600"
-      : "text-green-600"
-  }`}
->
-  {category === "todo"
-    ? "📝 To Do"
-    : category === "inProgress"
-    ? "⏳ In Progress"
-    : "✅ Done"}
-</h2>
+        className={`font-semibold text-2xl mb-4 ${category === "todo"
+            ? "text-blue-600"
+            : category === "inProgress"
+              ? "text-yellow-600"
+              : "text-green-600"
+          }`}
+      >
+        {category === "todo"
+          ? "📝 To Do"
+          : category === "inProgress"
+            ? "⏳ In Progress"
+            : "✅ Done"}
+      </h2>
 
       {tasks.map((task) => (
         <TaskCard
@@ -312,8 +342,9 @@ const TaskCard = ({ task, handleDeleteTask, setEditingTask, setTaskData }) => {
                 description: task.description,
                 category: task.category,
               });
+              window.scrollTo({ top: 0, behavior: 'smooth' }); // Smooth scroll to top
             }}
-          /> 
+          />
 
 
 
@@ -322,12 +353,12 @@ const TaskCard = ({ task, handleDeleteTask, setEditingTask, setTaskData }) => {
       {task.description && (
         <p className="text-sm text-gray-600 mt-2">{task.description}</p>
       )}
-   
- {task.createdAt  &&  (<div className="flex items-center justify-start gap-2 mt-3 bg-yellow-100 border border-yellow-300 rounded-full  w-50 text-sm text-yellow-700 shadow-sm"><Clock size={18} className="text-yellow-500" />
-  <span>
-    {task.createdAt ? format(new Date(task.createdAt), "PPpp") : "N/A"}
-  </span> </div>)
- }
+
+      {task.createdAt && (<div className="flex items-center justify-start gap-2 mt-3 bg-yellow-100 border border-yellow-300 rounded-full  w-50 text-sm text-yellow-700 shadow-sm"><Clock size={18} className="text-yellow-500" />
+        <span>
+          {task.createdAt ? format(new Date(task.createdAt), "PPpp") : "N/A"}
+        </span> </div>)
+      }
 
 
     </div>

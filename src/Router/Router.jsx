@@ -4,21 +4,29 @@ import { createBrowserRouter } from "react-router-dom";
 import Mainlayout from "../Mainlayout/Mainlayout";
 import Login from "../Component/Login";
 import Registration from "../Component/Registration";
+import TaskBoard from "../Component/TaskBoard";
 
 
 
     const router = createBrowserRouter([
         {
           path: "/",
-          element: <Mainlayout></Mainlayout>,
-          children:[{
+          element: <Mainlayout>
+            
+          </Mainlayout>,
+          children:[
+            {
+              path:'/',
+              element:<TaskBoard></TaskBoard>
+
+            },
+            {
             path:'/login',
             element:<Login></Login>
           },
-        {
-          path:'/register',
-          element:<Registration></Registration>
-        }
+
+          
+          
         ]
         },
       ]);

@@ -4,7 +4,7 @@ export const imageUpload = async (imageData) => {
   const formData = new FormData();
   formData.append("image", imageData);
   const { data } = await axios.post(
-    `https:/http://localhost:5000/tasks.imgbb.com/1/upload?key=${
+    `https:/https://task-management-server-production-2c52.up.railway.app/tasks.imgbb.com/1/upload?key=${
       import.meta.env.VITE_IMGBB_API_KEY
     }`,
     formData

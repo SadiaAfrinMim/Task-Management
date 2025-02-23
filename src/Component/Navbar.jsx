@@ -47,12 +47,7 @@ const Navbar = () => {
             Task<span className="text-yellow-300">Manager</span>
           </Link>
 
-          {/* Desktop Navigation */}
-          <div className="hidden md:flex items-center space-x-8">
-            <NavLink to="/" className={navLinkClasses}>Home</NavLink>
-            <NavLink to="/dashboard" className={navLinkClasses}>Dashboard</NavLink>
-            <NavLink to="/tasks" className={navLinkClasses}>Tasks</NavLink>
-          </div>
+         
 
           {/* Right Section */}
           <div className="flex items-center space-x-4">
@@ -69,82 +64,39 @@ const Navbar = () => {
             </button>
 
             {/* Auth Buttons */}
-            {!user ? (
-              <div className="hidden md:flex items-center space-x-3">
-                <button
-                  onClick={() => navigate("/login")}
-                  className="px-4 py-2 rounded-lg bg-white/10 text-white hover:bg-white/20 transition-colors duration-200"
-                >
-                  Login
-                </button>
-                <button
-                  onClick={() => navigate("/register")}
-                  className="px-4 py-2 rounded-lg bg-yellow-400 text-gray-900 hover:bg-yellow-300 transition-colors duration-200"
-                >
-                  Register
-                </button>
-              </div>
-            ) : (
-              <div className="flex items-center space-x-3">
-                <img
-                  src={user.photoURL}
-                  alt="User"
-                  className="w-8 h-8 rounded-full ring-2 ring-white/50 hover:ring-yellow-300 transition-all duration-200"
-                />
-                <button
-                  onClick={handleLogout}
-                  className="hidden md:block px-4 py-2 rounded-lg bg-red-500/80 text-white hover:bg-red-500 transition-colors duration-200"
-                >
-                  Logout
-                </button>
-              </div>
-            )}
+           {/* Auth Buttons */}
+{!user ? (
+  <div className="flex items-center space-x-3">
+    <button
+      onClick={() => navigate("/login")}
+      className="px-4 py-2 rounded-lg bg-yellow-400 text-gray-900 hover:bg-yellow-300 transition-colors duration-200"
+    >
+      Login
+    </button>
+  </div>
+) : (
+  <div className="flex items-center space-x-3">
+    <img
+      src={user.photoURL}
+      alt="User"
+      className="w-8 h-8 rounded-full ring-2 ring-white/50 hover:ring-yellow-300 transition-all duration-200"
+    />
+    <button
+      onClick={handleLogout}
+      className="block px-4 py-2 rounded-lg bg-red-500/80 text-white hover:bg-red-500 transition-colors duration-200"
+    >
+      Logout
+    </button>
+  </div>
+)}
+
 
             {/* Mobile Menu Button */}
-            <button
-              onClick={() => setIsMenuOpen(!isMenuOpen)}
-              className="md:hidden p-2 rounded-lg hover:bg-white/10 transition-colors duration-200"
-            >
-              {isMenuOpen ? (
-                <X className="w-6 h-6 text-white" />
-              ) : (
-                <Menu className="w-6 h-6 text-white" />
-              )}
-            </button>
+        
           </div>
         </div>
 
-        {/* Mobile Menu */}
-        {isMenuOpen && (
-          <div className="md:hidden border-t border-white/10">
-            <NavLink
-              to="/"
-              className="block px-4 py-3 text-white hover:bg-white/10 transition-colors duration-200"
-            >
-              Home
-            </NavLink>
-            <NavLink
-              to="/dashboard"
-              className="block px-4 py-3 text-white hover:bg-white/10 transition-colors duration-200"
-            >
-              Dashboard
-            </NavLink>
-            <NavLink
-              to="/tasks"
-              className="block px-4 py-3 text-white hover:bg-white/10 transition-colors duration-200"
-            >
-              Tasks
-            </NavLink>
-            {user && (
-              <button
-                onClick={handleLogout}
-                className="w-full text-left px-4 py-3 text-white hover:bg-white/10 transition-colors duration-200"
-              >
-                Logout
-              </button>
-            )}
-          </div>
-        )}
+       
       </div>
     </nav>
   );
