@@ -1,37 +1,93 @@
-import { useDraggable } from "@dnd-kit/core"
-import axios from "axios"
-import { Trash, Edit } from "lucide-react"
-import toast from "react-hot-toast"
+import { useState } from "react";
+import { useDrag } from "react-dnd";
+import { Task } from "./TaskBoard";
+import { Card, CardContent, CardFooter } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Pencil, Trash2, X, Check } from 'lucide-react';
 
-export const TaskCard = ({ task }) => {
-  const { attributes, listeners, setNodeRef } = useDraggable({
-    id: task._id,
-    data: { category: task.category },
-  })
+interface TaskCardProps {
+  task: Task;
+  onUpdate: (task: Task) => void;
+  onDelete: (id: string) => void;
+}
 
-  
-    
-   
+const TaskCard: React.FC<TaskCardProps> = ({ task, onUpdate, onDelete }) => {
+  const [isEditing, setIsEditing] = useState(false);
+  const [editedTask, setEditedTask] = useState(task);
+
+  const [{ isDragging }, drag] = useDrag({
+    type: "TASK",
+    item: { id: task.id },
+    collect: (monitor) => ({
+      isDragging: !!monitor.isDragging(),
+    }),
+  });
+
+  const handleEdit = () => {
+    setIsEditing(true);
+  };
+
+  const handleSave = () => {
+    onUpdate(editedTask);
+    setIsEditing(false);
+  };
+
+  const handleCancel = () => {
+    setEditedTask(task);
+    setIsEditing(false);
+  };
 
   return (
-    <div
-      ref={setNodeRef}
-      {...listeners}
-      {...attributes}
-      className="p-4 bg-white shadow rounded-lg flex justify-between items-center"
+    <Card
+      ref={drag}
+      className={`${isDragging ? "opacity-50" : ""} cursor-move`}
     >
-      <div>
-        <h3 className="font-bold text-lg">{task.title}</h3>
-        <p className="text-gray-600">{task.description}</p>
-      </div>
-      <div className="flex gap-2">
-        <button onClick={() => handleUpdateTask(task)} className="text-blue-500">
-          <Edit size={18} />
-        </button>
-        <button onClick={() => handleDeleteTask(task._id)} className="text-red-500">
-          <Trash size={18} />
-        </button>
-      </div>
-    </div>
-  )
-}
+      <CardContent className="p-4">
+        {isEditing ? (
+          <div className="space-y-2">
+            <Input
+              value={editedTask.title}
+              onChange={(e) => setEditedTask({ ...editedTask, title: e.target.value })}
+              placeholder="Task title"
+            />
+            <Textarea
+              value={editedTask.description}
+              onChange={(e) => setEditedTask({ ...editedTask, description: e.target.value })}
+              placeholder="Task description"
+            />
+          </div>
+        ) : (
+          <>
+            <h3 className="font-semibold mb-2">{task.title}</h3>
+            <p className="text-sm text-gray-600">{task.description}</p>
+          </>
+        )}
+      </CardContent>
+      <CardFooter className="flex justify-between p-4">
+        {isEditing ? (
+          <>
+            <Button onClick={handleSave} size="sm" variant="outline">
+              <Check className="w-4 h-4 mr-1" /> Save
+            </Button>
+            <Button onClick={handleCancel} size="sm" variant="outline">
+              <X className="w-4 h-4 mr-1" /> Cancel
+            </Button>
+          </>
+        ) : (
+          <>
+            <Button onClick={handleEdit} size="sm" variant="outline">
+              <Pencil className="w-4 h-4 mr-1" /> Edit
+            </Button>
+            <Button onClick={() => onDelete(task.id)} size="sm" variant="outline" className="text-red-500">
+              <Trash2 className="w-4 h-4 mr-1" /> Delete
+            </Button>
+          </>
+        )}
+      </CardFooter>
+    </Card>
+  );
+};
+
+export default TaskCard;
